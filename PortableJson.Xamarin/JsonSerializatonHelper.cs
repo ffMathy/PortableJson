@@ -4,8 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.Collections;
+using System.Collections.ObjectModel;
 
-namespace PortableJson
+namespace PortableJson.Xamarin
 {
     public static class JsonSerializationHelper
     {
@@ -18,13 +19,13 @@ namespace PortableJson
         private static bool IsInheritedBy(Type targetType, Type baseType)
         {
             //if targetType is a generic type (for instance, List<T>), then extract List<> without the generic parameter and use it for comparison.
-            if (targetType.IsGenericParameter)
+            if (targetType.IsConstructedGenericType)
             {
                 targetType = targetType.GetGenericTypeDefinition();
             }
 
             //if baseType is a generic type (for instance, List<T>), then extract List<> without the generic parameter and use it for comparison.
-            if (baseType.IsGenericParameter)
+            if (baseType.IsConstructedGenericType)
             {
                 baseType = baseType.GetGenericTypeDefinition();
             }
@@ -53,82 +54,90 @@ namespace PortableJson
         {
             var result = string.Empty;
 
-            var type = element.GetType();
-            var isArray = IsInheritedBy(type, typeof(IEnumerable));
-            if (isArray)
+            if (element is string)
             {
-                result += "[";
+                result += "\"";
+
+                result += element
+                    .ToString()
+                    .Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"");
+
+                result += "\"";
+            }
+            else if (element is int || element is long || element is short)
+            {
+                result += element.ToString();
+            }
+            else if (element is float || element is decimal || element is double)
+            {
+                result += element
+                    .ToString()
+                    .Replace(",", ".");
+            }
+            else if (element == null)
+            {
+                result += "null";
             }
             else
             {
-                result += "{";
-            }
+                var type = element.GetType();
 
-            if (isArray)
-            {
-                var subElements = element as IEnumerable;
-                var count = 0;
-                foreach (var subElement in subElements)
+                var isArray = type.IsArray
+                    || IsInheritedBy(type, typeof(IEnumerable<>))
+                    || IsInheritedBy(type, typeof(IList<>))
+                    || IsInheritedBy(type, typeof(ICollection<>))
+                    || IsInheritedBy(type, typeof(IReadOnlyCollection<>))
+                    || IsInheritedBy(type, typeof(List<>))
+                    || IsInheritedBy(type, typeof(HashSet<>))
+                    || IsInheritedBy(type, typeof(ReadOnlyCollection<>));
+                if (isArray)
                 {
-                    result += Serialize(subElement) + ",";
-                    count++;
+                    result += "[";
+                }
+                else
+                {
+                    result += "{";
                 }
 
-                if (count > 0)
+                if (isArray)
                 {
-                    //remove the extra comma.
-                    result = result.Substring(0, result.Length - 1);
+                    var subElements = element as IEnumerable;
+                    var count = 0;
+                    foreach (var subElement in subElements)
+                    {
+                        result += Serialize(subElement) + ",";
+                        count++;
+                    }
+
+                    if (count > 0)
+                    {
+                        //remove the extra comma.
+                        result = result.Substring(0, result.Length - 1);
+                    }
                 }
-            }
-            else
-            {
-                var properties = type
-                    .GetRuntimeProperties()
-                    .Where(p => p.CanRead);
-                foreach (var property in properties)
+                else
                 {
-                    result += property.Name + ":";
+                    var properties = type
+                        .GetRuntimeProperties()
+                        .Where(p => p.CanRead);
+                    foreach (var property in properties)
+                    {
+                        result += property.Name + ":";
 
-                    var value = property.GetValue(element);
-                    if (value is string)
-                    {
-                        result += "\"";
-
-                        result += value
-                            .ToString()
-                            .Replace("\\", "\\\\")
-                            .Replace("\"", "\\\"");
-
-                        result += "\"";
-                    }
-                    else if (value is int || value is long || value is short)
-                    {
-                        result += value.ToString();
-                    }
-                    else if (value is float || value is decimal || value is double)
-                    {
-                        result += value
-                            .ToString()
-                            .Replace(",", ".");
-                    }
-                    else if (value == null)
-                    {
-                        result += "null";
-                    }
-                    else
-                    {
+                        var value = property.GetValue(element);
                         result += Serialize(value);
                     }
                 }
-            }
 
-            if (isArray)
-            {
-                result += "]";
-            }
-            else
-            {
-                result += "}";
+                if (isArray)
+                {
+                    result += "]";
+                }
+                else
+                {
+                    result += "}";
+                }
             }
 
             return result;
