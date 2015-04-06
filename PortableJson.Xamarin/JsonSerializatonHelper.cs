@@ -50,7 +50,19 @@ namespace PortableJson.Xamarin
             }
         }
 
-        public static string Serialize<T>(T element) where T : class
+        private static bool IsArrayType(Type type)
+        {
+            return type.IsArray
+                    || IsInheritedBy(type, typeof(IEnumerable<>))
+                    || IsInheritedBy(type, typeof(IList<>))
+                    || IsInheritedBy(type, typeof(ICollection<>))
+                    || IsInheritedBy(type, typeof(IReadOnlyCollection<>))
+                    || IsInheritedBy(type, typeof(List<>))
+                    || IsInheritedBy(type, typeof(HashSet<>))
+                    || IsInheritedBy(type, typeof(ReadOnlyCollection<>));
+        }
+
+        public static string Serialize<T>(T element)
         {
             var result = string.Empty;
 
@@ -83,14 +95,7 @@ namespace PortableJson.Xamarin
             {
                 var type = element.GetType();
 
-                var isArray = type.IsArray
-                    || IsInheritedBy(type, typeof(IEnumerable<>))
-                    || IsInheritedBy(type, typeof(IList<>))
-                    || IsInheritedBy(type, typeof(ICollection<>))
-                    || IsInheritedBy(type, typeof(IReadOnlyCollection<>))
-                    || IsInheritedBy(type, typeof(List<>))
-                    || IsInheritedBy(type, typeof(HashSet<>))
-                    || IsInheritedBy(type, typeof(ReadOnlyCollection<>));
+                var isArray = IsArrayType(type);
                 if (isArray)
                 {
                     result += "[";
@@ -126,7 +131,12 @@ namespace PortableJson.Xamarin
                         result += property.Name + ":";
 
                         var value = property.GetValue(element);
-                        result += Serialize(value);
+                        result += Serialize(value) + ",";
+                    }
+
+                    if(properties.Any())
+                    {
+                        result = result.Substring(0, result.Length - 1);
                     }
                 }
 
