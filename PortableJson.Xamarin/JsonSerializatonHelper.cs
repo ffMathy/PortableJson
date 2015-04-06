@@ -168,6 +168,10 @@ namespace PortableJson.Xamarin
 
         public static object Deserialize(string input, Type type)
         {
+            if(input == null)
+            {
+                return "null";
+            }
 
             var instance = (object)null;
 
@@ -187,10 +191,12 @@ namespace PortableJson.Xamarin
             var propertyAssigning = (PropertyInfo)null;
 
             var data = string.Empty;
-            foreach (var character in input)
+            for(var offset = 0;offset<input.Length;offset++) 
             {
+                var character = input[offset];
+
                 //ignore some input.
-                if (character == ' ') continue;
+                if (character == ' ' && !inString) continue;
                 if (character == '\"' && inDeclaration) continue;
 
                 //are we in a declaration, or an assignment?
@@ -218,7 +224,7 @@ namespace PortableJson.Xamarin
                 }
                 else if (inAssignment)
                 {
-                    var isEndOfAssignment = false;
+                    var isEndOfAssignment = offset == input.Length - 1;
 
                     //are we in a string?
                     if (inString)
@@ -276,7 +282,7 @@ namespace PortableJson.Xamarin
 
                             if (nestingLevel == 0)
                             {
-                                isEndOfAssignment = true;
+                                isEndOfAssignment |= true;
                             }
                         }
                         else if (character == ']')
@@ -285,7 +291,7 @@ namespace PortableJson.Xamarin
 
                             if (nestingLevel == 0)
                             {
-                                isEndOfAssignment = true;
+                                isEndOfAssignment |= true;
                             }
 
                         }
@@ -304,8 +310,11 @@ namespace PortableJson.Xamarin
                                     inAssignment = false;
                                 }
 
-                                isEndOfAssignment = true;
+                                isEndOfAssignment |= true;
                             }
+                        } else
+                        {
+                            data += character;
                         }
                     }
 
