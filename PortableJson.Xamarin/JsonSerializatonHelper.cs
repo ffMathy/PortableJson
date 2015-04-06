@@ -5,11 +5,19 @@ using System.Text;
 using System.Reflection;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.Globalization;
 
 namespace PortableJson.Xamarin
 {
     public static class JsonSerializationHelper
     {
+        private static readonly CultureInfo serializationCulture;
+
+        static JsonSerializationHelper()
+        {
+            serializationCulture = new CultureInfo("en-US");
+        }
+
         /// <summary>
         /// Goes through all targetType's base types to see if one of them match baseType. In other words, to see if targetType inherits from baseType.
         /// </summary>
@@ -134,7 +142,7 @@ namespace PortableJson.Xamarin
                         result += Serialize(value) + ",";
                     }
 
-                    if(properties.Any())
+                    if (properties.Any())
                     {
                         result = result.Substring(0, result.Length - 1);
                     }
@@ -153,10 +161,15 @@ namespace PortableJson.Xamarin
             return result;
         }
 
-        public static T Deserialize<T>(string input) where T : new()
+        public static T Deserialize<T>(string input)
         {
-            var instance = new T();
-            var type = typeof(T);
+            return (T)(Deserialize(input, typeof(T)) ?? default(T));
+        }
+
+        public static object Deserialize(string input, Type type)
+        {
+
+            var instance = (object)null;
 
             var properties = type
                 .GetRuntimeProperties()
@@ -169,46 +182,24 @@ namespace PortableJson.Xamarin
             var inDeclaration = false;
             var inAssignment = true;
 
+            var nestingLevel = 0;
+
             var propertyAssigning = (PropertyInfo)null;
 
             var data = string.Empty;
             foreach (var character in input)
             {
-                if (inString)
-                {
-                    if (character == '\\' && !inEscapeSequence)
-                    {
-                        inEscapeSequence = true;
-                    }
-                    else
-                    {
-                        if (inEscapeSequence || character != '\"')
-                        {
-                            data += character;
-                        }
-                        else
-                        {
-                            //we're outside of the string now.
-                            inString = false;
-                        }
+                //ignore some input.
+                if (character == ' ') continue;
+                if (character == '\"' && inDeclaration) continue;
 
-                        //escape the escape sequence again.
-                        inEscapeSequence = false;
-                    }
-                }
-                else
+                //are we in a declaration, or an assignment?
+                if (inDeclaration)
                 {
-                    //ignore whitespaces.
-                    if (character == ' ') continue;
-
-                    if (inDeclaration)
+                    //are we in an object?
+                    if (inObject)
                     {
-                        if (character == '{')
-                        {
-                            inObject = true;
-                            inDeclaration = true;
-                        }
-                        else if (character == ':')
+                        if (character == ':')
                         {
                             inDeclaration = false;
                             inAssignment = true;
@@ -224,12 +215,174 @@ namespace PortableJson.Xamarin
                             }
                         }
                     }
+                }
+                else if (inAssignment)
+                {
+                    var isEndOfAssignment = false;
 
-                    data += character;
+                    //are we in a string?
+                    if (inString)
+                    {
+                        if (character == '\\' && !inEscapeSequence)
+                        {
+                            //ignore escape sequences.
+                            inEscapeSequence = true;
+                        }
+                        else
+                        {
+                            if (inEscapeSequence || character != '\"')
+                            {
+                                //if the string is not terminating, or we're in an escape sequence, just append the character.
+                                data += character;
+                            }
+                            else
+                            {
+                                //we're outside of the string now.
+                                inString = false;
+                            }
+
+                            //let's get out of the escape sequence again. an escape sequence only counts for one character ahead anyway.
+                            inEscapeSequence = false;
+                        }
+                    }
+                    else
+                    {
+                        if (character == '\"')
+                        {
+                            //if we are not in a string and we encounter a quotation mark, then we're moving into a string.
+                            inString = true;
+                        }
+                        else if (character == '{')
+                        {
+                            if (nestingLevel == 0)
+                            {
+                                inObject = true;
+                            }
+
+                            nestingLevel++;
+                        }
+                        else if (character == '[')
+                        {
+                            if (nestingLevel == 0)
+                            {
+                                inArray = true;
+                            }
+
+                            nestingLevel++;
+                        }
+                        else if (character == '}')
+                        {
+                            nestingLevel--;
+
+                            if (nestingLevel == 0)
+                            {
+                                isEndOfAssignment = true;
+                            }
+                        }
+                        else if (character == ']')
+                        {
+                            nestingLevel--;
+
+                            if (nestingLevel == 0)
+                            {
+                                isEndOfAssignment = true;
+                            }
+
+                        }
+                        else if (character == ',')
+                        {
+                            if (nestingLevel == 0)
+                            {
+                                if (inArray)
+                                {
+                                    inDeclaration = false;
+                                    inAssignment = true;
+                                }
+                                else
+                                {
+                                    inDeclaration = true;
+                                    inAssignment = false;
+                                }
+
+                                isEndOfAssignment = true;
+                            }
+                        }
+                    }
+
+                    //should we assign the value?
+                    if (isEndOfAssignment)
+                    {
+                        inAssignment = false;
+
+                        //gather values differently depending on type.
+                        if (inObject)
+                        {
+                            inObject = false;
+
+                            //try to convert the type if possible.
+                            var targetType = propertyAssigning.PropertyType;
+                            var element = Deserialize(data, targetType);
+
+                            //create a new instance if not already set.
+                            instance = instance ?? Activator.CreateInstance(type);
+                            propertyAssigning.SetValue(instance, element);
+
+                            //reset the property.
+                            propertyAssigning = null;
+                        }
+                        else if (inArray)
+                        {
+                            inArray = false;
+
+                            if (character == ']')
+                            {
+                                //TODO: return list.
+                            }
+                            else
+                            {
+                                //TODO: add to list.
+                            }
+                            throw new NotImplementedException();
+                        }
+                        else
+                        {
+                            //we are in no object, and in no array. just return the element.
+                            if (type == typeof(string))
+                            {
+                                return data;
+                            }
+                            else if (type == typeof(int))
+                            {
+                                return int.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                            else if (type == typeof(long))
+                            {
+                                return long.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                            else if (type == typeof(short))
+                            {
+                                return short.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                            else if (type == typeof(float))
+                            {
+                                return float.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                            else if (type == typeof(decimal))
+                            {
+                                return decimal.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                            else if (type == typeof(double))
+                            {
+                                return double.Parse(data, NumberStyles.Any, serializationCulture);
+                            }
+                        }
+
+                        data = string.Empty;
+                    }
                 }
             }
 
-            throw new NotImplementedException();
+            return null;
         }
     }
 }
