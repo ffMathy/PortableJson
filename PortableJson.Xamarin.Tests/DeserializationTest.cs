@@ -45,6 +45,26 @@ namespace PortableJson.Xamarin.Tests
         }
 
         [TestMethod]
+        public void TestArrayDeserialization()
+        {
+            var numericList = JsonSerializationHelper.Deserialize<List<int>>("[1337,-1337,0]");
+            Assert.IsNotNull(numericList);
+            Assert.AreEqual(3, numericList.Count);
+
+            Assert.AreEqual(1337, numericList[0]);
+            Assert.AreEqual(-1337, numericList[1]);
+            Assert.AreEqual(0, numericList[2]);
+            
+            var stringList = JsonSerializationHelper.Deserialize<List<string>>("[\"the quick brown fox\",\"jumps over the\",\"lazy dog\"]");
+            Assert.IsNotNull(stringList);
+            Assert.AreEqual(3, stringList.Count);
+
+            Assert.AreEqual("the quick brown fox", stringList[0]);
+            Assert.AreEqual("jumps over the", stringList[1]);
+            Assert.AreEqual("lazy dog", stringList[2]);
+        }
+
+        [TestMethod]
         public void TestObjectDeserialization()
         {
             var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",Age:1337},{Name:\"Ole\",Age:-10}],Title:\"My group\"}");

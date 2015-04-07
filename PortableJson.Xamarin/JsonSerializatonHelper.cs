@@ -158,7 +158,7 @@ namespace PortableJson.Xamarin
                 }
             }
 
-            return result;
+            return SanitizeJson(result);
         }
 
         public static T Deserialize<T>(string input)
@@ -234,9 +234,193 @@ namespace PortableJson.Xamarin
             return result;
         }
 
+        /// <summary>
+        /// Deserializes a JSON string representing an object into an object.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        private static object DeserializeObject(string data, Type type)
+        {
+            if (data.Length < 2 || !(data.StartsWith("{") && data.EndsWith("}")))
+            {
+                throw new InvalidOperationException("JSON objects must begin with a '{' and end with a '}'.");
+            }
+
+            //get all properties that are relevant.
+            var properties = type
+                .GetRuntimeProperties()
+                .Where(p => p.CanWrite);
+            var instance = Activator.CreateInstance(type);
+
+            //get the inner data.
+            data = data.Substring(0, data.Length - 1).Substring(1);
+
+            //maintain the state.
+            var inString = false;
+            var inEscapeSequence = false;
+            var nestingLevel = 0;
+
+            var temporaryData = string.Empty;
+            for (var i = 0; i < data.Length; i++)
+            {
+                var character = data[i];
+                if (inString)
+                {
+                    if (inEscapeSequence)
+                    {
+                        inEscapeSequence = false;
+                    }
+                    else
+                    {
+                        if (character == '\"')
+                        {
+                            inString = false;
+                        }
+                        else if (character == '\\')
+                        {
+                            inEscapeSequence = true;
+                        }
+                        else
+                        {
+                            temporaryData += character;
+                        }
+                    }
+                }
+                else
+                {
+                    //keep track of nesting levels.
+                    if (character == '[' || character == '{') nestingLevel++;
+                    if (character == ']' || character == '}') nestingLevel--;
+
+                    //are we done with the whole sequence, or are we at the next element?
+                    var isLastCharacter = i == data.Length - 1;
+                    if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                    {
+                        //do we need to finalize the temporary data?
+                        if (isLastCharacter)
+                        {
+                            temporaryData += character;
+                        }
+
+                        if (!string.IsNullOrEmpty(temporaryData))
+                        {
+                            var chunks = temporaryData.Split(new[] { ':' }, 2);
+                            var propertyName = chunks[0];
+                            var propertyValue = chunks[1];
+
+                            //now we can find the property on the object.
+                            var property = properties.SingleOrDefault(p => p.Name == propertyName);
+                            if (property != null)
+                            {
+
+                                //deserialize the inner data and set it to the property.
+                                var element = Deserialize(propertyValue, property.PropertyType);
+                                property.SetValue(instance, element);
+
+                            }
+
+                            //reset the temporary data.
+                            temporaryData = string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        temporaryData += character;
+                    }
+                }
+            }
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Deserializes a JSON string representing an array into an array.
+        /// </summary>
+        /// <param name="data"></param>
+        /// <param name="type"></param>
+        /// <returns></returns>
         private static object DeserializeArray(string data, Type type)
         {
+            if (data.Length < 2 || !(data.StartsWith("[") && data.EndsWith("]")))
+            {
+                throw new InvalidOperationException("JSON arrays must begin with a '[' and end with a ']'.");
+            }
 
+            //get the type of elements in this array.
+            var innerType = type.GenericTypeArguments[0];
+            var listType = typeof(List<>).MakeGenericType(innerType);
+            var list = Activator.CreateInstance(listType);
+            var addMethodName = nameof(List<object>.Add);
+            var listAddMethod = listType.GetRuntimeMethod(addMethodName, new[] { innerType });
+
+            //get the inner data.
+            data = data.Substring(0, data.Length - 1).Substring(1);
+
+            //maintain the state.
+            var inString = false;
+            var inEscapeSequence = false;
+            var nestingLevel = 0;
+
+            var temporaryData = string.Empty;
+            for (var i = 0; i < data.Length; i++)
+            {
+                var character = data[i];
+                if (inString)
+                {
+                    if (inEscapeSequence)
+                    {
+                        inEscapeSequence = false;
+                    }
+                    else
+                    {
+                        if (character == '\"')
+                        {
+                            inString = false;
+                        }
+                        else if (character == '\\')
+                        {
+                            inEscapeSequence = true;
+                        }
+                        else
+                        {
+                            temporaryData += character;
+                        }
+                    }
+                }
+                else
+                {
+                    //keep track of nesting levels.
+                    if (character == '[' || character == '{') nestingLevel++;
+                    if (character == ']' || character == '}') nestingLevel--;
+
+                    //are we done with the whole sequence, or are we at the next element?
+                    var isLastCharacter = i == data.Length - 1;
+                    if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                    {
+                        //do we need to finalize the temporary data?
+                        if(isLastCharacter)
+                        {
+                            temporaryData += character;
+                        }
+
+                        if (!string.IsNullOrEmpty(temporaryData))
+                        {
+                            var element = Deserialize(temporaryData, innerType);
+                            listAddMethod.Invoke(list, new[] { element });
+
+                            //reset the temporary data.
+                            temporaryData = string.Empty;
+                        }
+                    }
+                    else
+                    {
+                        temporaryData += character;
+                    }
+                }
+            }
+
+            return list;
         }
 
         private static object DeserializeSimple(string data, Type type)
@@ -245,11 +429,36 @@ namespace PortableJson.Xamarin
             {
                 if (data.Length < 2 || (!data.EndsWith("\"") && !data.StartsWith("\"")))
                 {
-                    return data.Substring(0, data.Length - 1).Substring(1);
+                    throw new InvalidOperationException("String deserialization requires the JSON input to be encapsulated in quotation marks.");
                 }
                 else
                 {
-                    throw new InvalidOperationException("String deserialization requires the JSON input to be encapsulated in quotation marks.");
+                    //get the inner string data.
+                    data = data.Substring(0, data.Length - 1).Substring(1);
+
+                    //keep track of state.
+                    var inEscapeSequence = false;
+
+                    var result = string.Empty;
+                    foreach (var character in data)
+                    {
+                        if (inEscapeSequence)
+                        {
+                            inEscapeSequence = false;
+                        }
+                        else
+                        {
+                            if (character == '\\')
+                            {
+                                inEscapeSequence = true;
+                                continue;
+                            }
+                        }
+
+                        result += character;
+                    }
+
+                    return result;
                 }
             }
             else if (type == typeof(int))
