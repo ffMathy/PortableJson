@@ -168,7 +168,123 @@ namespace PortableJson.Xamarin
 
         public static object Deserialize(string input, Type type)
         {
-            if(input == null)
+            if (input == null)
+            {
+                return "null";
+            }
+
+            //remove all whitespaces from the JSON string.
+            input = SanitizeJson(input);
+
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) || type == typeof(string))
+            {
+                //simple deserialization.
+                return DeserializeSimple(input, type);
+            }
+            else if (IsArrayType(type))
+            {
+                //array deserialization.
+                return DeserializeArray(input, type);
+            }
+            else
+            {
+                //object deserialization.
+                return DeserializeObject(input, type);
+            }
+        }
+
+        /// <summary>
+        /// Removes unnecessary whitespaces from a JSON input.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        private static string SanitizeJson(string input)
+        {
+            var inString = false;
+            var inEscapeSequence = false;
+
+            var result = string.Empty;
+
+            foreach (var character in input)
+            {
+                if (inString)
+                {
+                    if (inEscapeSequence)
+                    {
+                        inEscapeSequence = false;
+                    }
+                    else if (character == '\\')
+                    {
+                        inEscapeSequence = true;
+                    }
+                }
+                else
+                {
+                    if (character == ' ') continue;
+
+                    if (character == '\"')
+                    {
+                        inString = true;
+                    }
+                }
+
+                result += character;
+            }
+
+            return result;
+        }
+
+        private static object DeserializeArray(string data, Type type)
+        {
+
+        }
+
+        private static object DeserializeSimple(string data, Type type)
+        {
+            if (type == typeof(string))
+            {
+                if (data.Length < 2 || (!data.EndsWith("\"") && !data.StartsWith("\"")))
+                {
+                    return data.Substring(0, data.Length - 1).Substring(1);
+                }
+                else
+                {
+                    throw new InvalidOperationException("String deserialization requires the JSON input to be encapsulated in quotation marks.");
+                }
+            }
+            else if (type == typeof(int))
+            {
+                return int.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else if (type == typeof(long))
+            {
+                return long.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else if (type == typeof(short))
+            {
+                return short.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else if (type == typeof(float))
+            {
+                return float.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else if (type == typeof(decimal))
+            {
+                return decimal.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else if (type == typeof(double))
+            {
+                return double.Parse(data, NumberStyles.Any, serializationCulture);
+            }
+            else
+            {
+                throw new NotImplementedException(string.Format("Can't serialize a type of {0}.", data));
+            }
+        }
+
+        public static object DeserializeOld(string input, Type type)
+        {
+            if (input == null)
             {
                 return "null";
             }
@@ -191,7 +307,7 @@ namespace PortableJson.Xamarin
             var propertyAssigning = (PropertyInfo)null;
 
             var data = string.Empty;
-            for(var offset = 0;offset<input.Length;offset++) 
+            for (var offset = 0; offset < input.Length; offset++)
             {
                 var character = input[offset];
 
@@ -203,23 +319,24 @@ namespace PortableJson.Xamarin
                 if (inDeclaration)
                 {
                     //are we in an object?
-                    if (inObject)
+                    if (nestingLevel == 0 && character == ':')
                     {
-                        if (character == ':')
+                        inDeclaration = false;
+                        inAssignment = true;
+
+                        var propertyName = data;
+                        data = string.Empty;
+
+                        //do we have a property with this name?
+                        var property = properties.SingleOrDefault(p => p.Name == propertyName);
+                        if (property != null)
                         {
-                            inDeclaration = false;
-                            inAssignment = true;
-
-                            var propertyName = data;
-                            data = string.Empty;
-
-                            //do we have a property with this name?
-                            var property = properties.SingleOrDefault(p => p.Name == propertyName);
-                            if (property != null)
-                            {
-                                propertyAssigning = property;
-                            }
+                            propertyAssigning = property;
                         }
+                    }
+                    else
+                    {
+                        data += character;
                     }
                 }
                 else if (inAssignment)
@@ -262,6 +379,9 @@ namespace PortableJson.Xamarin
                         {
                             if (nestingLevel == 0)
                             {
+                                inDeclaration = true;
+                                inAssignment = false;
+
                                 inObject = true;
                             }
 
@@ -282,6 +402,9 @@ namespace PortableJson.Xamarin
 
                             if (nestingLevel == 0)
                             {
+                                inAssignment = false;
+                                inDeclaration = true;
+
                                 isEndOfAssignment |= true;
                             }
                         }
@@ -291,6 +414,9 @@ namespace PortableJson.Xamarin
 
                             if (nestingLevel == 0)
                             {
+                                inAssignment = false;
+                                inDeclaration = true;
+
                                 isEndOfAssignment |= true;
                             }
 
@@ -312,7 +438,8 @@ namespace PortableJson.Xamarin
 
                                 isEndOfAssignment |= true;
                             }
-                        } else
+                        }
+                        else
                         {
                             data += character;
                         }
