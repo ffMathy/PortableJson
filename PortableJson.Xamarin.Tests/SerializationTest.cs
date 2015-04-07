@@ -1,7 +1,5 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
-using PortableJson.Xamarin;
 using PortableJson.Xamarin.Tests.TestData;
 
 namespace PortableJson.Xamarin.Tests
