@@ -93,6 +93,9 @@ namespace PortableJson.Xamarin
                 result += element
                     .ToString()
                     .Replace(",", ".");
+            } else if(element is bool)
+            {
+                result = (bool)(object)element ? "true" : "false";
             }
             else if (element == null)
             {
@@ -135,7 +138,7 @@ namespace PortableJson.Xamarin
                         .Where(p => p.CanRead);
                     foreach (var property in properties)
                     {
-                        result += property.Name + ":";
+                        result += "\"" + property.Name + "\":";
 
                         var value = property.GetValue(element);
                         result += Serialize(value) + ",";
@@ -175,7 +178,7 @@ namespace PortableJson.Xamarin
             //remove all whitespaces from the JSON string.
             input = SanitizeJson(input);
 
-            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) || type == typeof(string))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) || type == typeof(string) || type == typeof(bool))
             {
                 //simple deserialization.
                 return DeserializeSimple(input, type);
@@ -305,7 +308,11 @@ namespace PortableJson.Xamarin
                         if (!string.IsNullOrEmpty(temporaryData))
                         {
                             var chunks = temporaryData.Split(new[] { ':' }, 2);
+
                             var propertyName = chunks[0];
+                            if (propertyName.StartsWith("\"")) propertyName = propertyName.Substring(1);
+                            if (propertyName.EndsWith("\"")) propertyName = propertyName.Substring(0, propertyName.Length-1);
+
                             var propertyValue = chunks[1];
 
                             //now we can find the property on the object.

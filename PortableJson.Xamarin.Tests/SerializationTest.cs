@@ -18,7 +18,7 @@ namespace PortableJson.Xamarin.Tests
 
             var json = JsonSerializationHelper.Serialize(list);
 
-            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{Name:\"Foobar\",Age:1337}]", json);
+            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{\"Name\":\"Foobar\",\"Age\":1337}]", json);
         }
 
         [TestMethod]
@@ -29,6 +29,13 @@ namespace PortableJson.Xamarin.Tests
             Assert.AreEqual("\"The file is in C:\\\\mystuff\"", JsonSerializationHelper.Serialize("The file is in C:\\mystuff"));
 
             Assert.AreEqual("null", JsonSerializationHelper.Serialize((string)null));
+        }
+
+        [TestMethod]
+        public void TestBooleanSerialization()
+        {
+            Assert.AreEqual("true", JsonSerializationHelper.Serialize(true));
+            Assert.AreEqual("false", JsonSerializationHelper.Serialize(false));
         }
 
         [TestMethod]
@@ -72,7 +79,7 @@ namespace PortableJson.Xamarin.Tests
                 Age = -10
             });
 
-            Assert.AreEqual("{Persons:[{Name:\"Jens\",Age:1337},{Name:\"Ole\",Age:-10}],Title:\"My group\"}", JsonSerializationHelper.Serialize(group));
+            Assert.AreEqual("{\"Persons\":[{\"Name\":\"Jens\",\"Age\":1337},{\"Name\":\"Ole\",\"Age\":-10}],\"Title\":\"My group\"}", JsonSerializationHelper.Serialize(group));
         }
     }
 }

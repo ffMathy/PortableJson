@@ -19,6 +19,19 @@ namespace PortableJson.Xamarin.Tests
         }
 
         [TestMethod]
+        public void TestBooleanDeserialization()
+        {
+            Assert.AreEqual(false, JsonSerializationHelper.Deserialize<bool>("false"));
+            Assert.AreEqual(true, JsonSerializationHelper.Deserialize<bool>("true"));
+
+            Assert.AreEqual(false, JsonSerializationHelper.Deserialize<bool>("FALSE"));
+            Assert.AreEqual(true, JsonSerializationHelper.Deserialize<bool>("TRUE"));
+
+            Assert.AreEqual(false, JsonSerializationHelper.Deserialize<bool>("fALSE"));
+            Assert.AreEqual(true, JsonSerializationHelper.Deserialize<bool>("tRUE"));
+        }
+
+        [TestMethod]
         public void TestNumericDeserialization()
         {
             Assert.AreEqual((double)1.337, JsonSerializationHelper.Deserialize<double>("1.337"));
@@ -64,7 +77,7 @@ namespace PortableJson.Xamarin.Tests
         [TestMethod]
         public void TestObjectDeserialization()
         {
-            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",Age:1337},{Name:\"Ole\",Age:-10}],Title:\"My group\"}");
+            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",\"Age\":1337},{\"Name\":\"Ole\",Age:-10}],Title:\"My group\"}");
             Assert.IsNotNull(group);
 
             Assert.AreEqual("My group", group.Title);
