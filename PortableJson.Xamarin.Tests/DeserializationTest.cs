@@ -77,16 +77,17 @@ namespace PortableJson.Xamarin.Tests
         [TestMethod]
         public void TestObjectDeserialization()
         {
-            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",\"Age\":1337},{\"Name\":\"Ole\",Age:-10}],Title:\"My group\"}");
+            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}],Title:\"My group\",IsActive:true}");
             Assert.IsNotNull(group);
 
             Assert.AreEqual("My group", group.Title);
+            Assert.IsTrue(group.IsActive);
 
             Assert.IsNotNull(group.Persons);
             Assert.AreEqual(2, group.Persons.Count);
 
-            Assert.IsTrue(group.Persons.Any(p => p.Age == 1337 && p.Name == "Jens"));
-            Assert.IsTrue(group.Persons.Any(p => p.Age == -10 && p.Name == "Ole"));
+            Assert.IsTrue(group.Persons.Any(p => p.Age == 1337 && p.Name == "Jens" && p.IsAlive));
+            Assert.IsTrue(group.Persons.Any(p => p.Age == -10 && p.Name == "Ole" && !p.IsAlive));
         }
     }
 }

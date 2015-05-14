@@ -18,7 +18,7 @@ namespace PortableJson.Xamarin.Tests
 
             var json = JsonSerializationHelper.Serialize(list);
 
-            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{\"Name\":\"Foobar\",\"Age\":1337}]", json);
+            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{\"Name\":\"Foobar\",\"Age\":1337,\"IsAlive\":false}]", json);
         }
 
         [TestMethod]
@@ -66,20 +66,23 @@ namespace PortableJson.Xamarin.Tests
         {
             var group = new Group();
             group.Title = "My group";
+            group.IsActive = true;
 
             var persons = group.Persons = new List<Person>();
             persons.Add(new Person()
             {
                 Name = "Jens",
-                Age = 1337
+                Age = 1337,
+                IsAlive = true
             });
             persons.Add(new Person()
             {
                 Name = "Ole",
-                Age = -10
+                Age = -10,
+                IsAlive = false
             });
 
-            Assert.AreEqual("{\"Persons\":[{\"Name\":\"Jens\",\"Age\":1337},{\"Name\":\"Ole\",\"Age\":-10}],\"Title\":\"My group\"}", JsonSerializationHelper.Serialize(group));
+            Assert.AreEqual("{\"Persons\":[{\"Name\":\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",\"Age\":-10,\"IsAlive\":false}],\"Title\":\"My group\",\"IsActive\":true}", JsonSerializationHelper.Serialize(group));
         }
     }
 }

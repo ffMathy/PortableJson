@@ -490,6 +490,9 @@ namespace PortableJson.Xamarin
             else if (type == typeof(double))
             {
                 return double.Parse(data, NumberStyles.Any, serializationCulture);
+            } else if(type == typeof(bool))
+            {
+                return string.Equals("true", data, StringComparison.OrdinalIgnoreCase) ? true : false;
             }
             else
             {
