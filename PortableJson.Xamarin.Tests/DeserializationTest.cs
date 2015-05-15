@@ -74,7 +74,7 @@ namespace PortableJson.Xamarin.Tests
             Assert.AreEqual("jumps over the", stringList[1]);
             Assert.AreEqual("lazy dog", stringList[2]);
 
-            const string groupJson = "{\"Leader\":{Name:\"Jens\"},{\"Name\":\"Ole\"},Persons:[{Name:\"Jens\"},{\"Name\":\"Ole\"}],Title:\"My group\"}";
+            var groupJson = "{\"Leader\":{Name:null},{\"Id\":\"" + Guid.NewGuid() + "\",\"Name\":\"Ole\"},Persons:[{Name:\"Jens\"},{\"Name\":\"Ole\"}],Title:\"My group\"}";
             var objectList = JsonSerializationHelper.Deserialize<List<Group>>("[" + groupJson + "," + groupJson + "]");
             Assert.IsNotNull(objectList);
             Assert.AreEqual(2, objectList.Count);
@@ -84,7 +84,7 @@ namespace PortableJson.Xamarin.Tests
         public void TestObjectDeserialization()
         {
             var guid = Guid.NewGuid();
-            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{\"Id\":\"" + guid + "\",Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}],Title:\"My group\",IsActive:true}");
+            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{\"Id\":\"" + guid + "\",Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}],IsActive:true,Title:\"My group\"}");
             Assert.IsNotNull(group);
 
             Assert.AreEqual("My group", group.Title);

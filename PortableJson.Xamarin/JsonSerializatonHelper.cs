@@ -173,7 +173,7 @@ namespace PortableJson.Xamarin
 
         public static object Deserialize(string input, Type type)
         {
-            if (input == null)
+            if (input == null || input == "null")
             {
                 return "null";
             }
@@ -269,8 +269,11 @@ namespace PortableJson.Xamarin
             var temporaryData = string.Empty;
             for (var i = 0; i < data.Length; i++)
             {
+                //are we done with the whole sequence, or are we at the next element?
+                var isLastCharacter = i == data.Length - 1;
+
                 var character = data[i];
-                if (inString)
+                if (inString && !isLastCharacter)
                 {
                     if (inEscapeSequence)
                     {
@@ -295,7 +298,7 @@ namespace PortableJson.Xamarin
                 }
                 else
                 {
-                    if (character == '\"')
+                    if (character == '\"' && !isLastCharacter)
                     {
                         inString = true;
                         temporaryData += character;
@@ -307,8 +310,6 @@ namespace PortableJson.Xamarin
                         if (character == '[' || character == '{') nestingLevel++;
                         if (character == ']' || character == '}') nestingLevel--;
 
-                        //are we done with the whole sequence, or are we at the next element?
-                        var isLastCharacter = i == data.Length - 1;
                         if (nestingLevel == 0 && (character == ',' || isLastCharacter))
                         {
                             //do we need to finalize the temporary data?
@@ -519,7 +520,7 @@ namespace PortableJson.Xamarin
             {
                 if (data.Length < 2 || (!data.EndsWith("\"") && !data.StartsWith("\"")))
                 {
-                    throw new InvalidOperationException("String deserialization requires the JSON input to be encapsulated in quotation marks.");
+                    throw new InvalidOperationException("GUID deserialization requires the JSON input to be encapsulated in quotation marks.");
                 }
                 else
                 {
