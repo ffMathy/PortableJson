@@ -277,6 +277,7 @@ namespace PortableJson.Xamarin
                     {
                         if (character == '\"')
                         {
+                            temporaryData += character;
                             inString = false;
                         }
                         else if (character == '\\')
@@ -291,48 +292,57 @@ namespace PortableJson.Xamarin
                 }
                 else
                 {
-                    //keep track of nesting levels.
-                    if (character == '[' || character == '{') nestingLevel++;
-                    if (character == ']' || character == '}') nestingLevel--;
-
-                    //are we done with the whole sequence, or are we at the next element?
-                    var isLastCharacter = i == data.Length - 1;
-                    if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                    if (character == '\"')
                     {
-                        //do we need to finalize the temporary data?
-                        if (isLastCharacter)
-                        {
-                            temporaryData += character;
-                        }
-
-                        if (!string.IsNullOrEmpty(temporaryData))
-                        {
-                            var chunks = temporaryData.Split(new[] { ':' }, 2);
-
-                            var propertyName = chunks[0];
-                            if (propertyName.StartsWith("\"")) propertyName = propertyName.Substring(1);
-                            if (propertyName.EndsWith("\"")) propertyName = propertyName.Substring(0, propertyName.Length-1);
-
-                            var propertyValue = chunks[1];
-
-                            //now we can find the property on the object.
-                            var property = properties.SingleOrDefault(p => p.Name == propertyName);
-                            if (property != null)
-                            {
-
-                                //deserialize the inner data and set it to the property.
-                                var element = Deserialize(propertyValue, property.PropertyType);
-                                property.SetValue(instance, element);
-
-                            }
-
-                            //reset the temporary data.
-                            temporaryData = string.Empty;
-                        }
+                        inString = true;
+                        temporaryData += character;
                     }
                     else
                     {
-                        temporaryData += character;
+
+                        //keep track of nesting levels.
+                        if (character == '[' || character == '{') nestingLevel++;
+                        if (character == ']' || character == '}') nestingLevel--;
+
+                        //are we done with the whole sequence, or are we at the next element?
+                        var isLastCharacter = i == data.Length - 1;
+                        if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                        {
+                            //do we need to finalize the temporary data?
+                            if (isLastCharacter)
+                            {
+                                temporaryData += character;
+                            }
+
+                            if (!string.IsNullOrEmpty(temporaryData))
+                            {
+                                var chunks = temporaryData.Split(new[] { ':' }, 2);
+
+                                var propertyName = chunks[0];
+                                if (propertyName.StartsWith("\"")) propertyName = propertyName.Substring(1);
+                                if (propertyName.EndsWith("\"")) propertyName = propertyName.Substring(0, propertyName.Length - 1);
+
+                                var propertyValue = chunks[1];
+
+                                //now we can find the property on the object.
+                                var property = properties.SingleOrDefault(p => p.Name == propertyName);
+                                if (property != null)
+                                {
+
+                                    //deserialize the inner data and set it to the property.
+                                    var element = Deserialize(propertyValue, property.PropertyType);
+                                    property.SetValue(instance, element);
+
+                                }
+
+                                //reset the temporary data.
+                                temporaryData = string.Empty;
+                            }
+                        }
+                        else
+                        {
+                            temporaryData += character;
+                        }
                     }
                 }
             }
@@ -371,8 +381,11 @@ namespace PortableJson.Xamarin
             var temporaryData = string.Empty;
             for (var i = 0; i < data.Length; i++)
             {
+                //are we done with the whole sequence, or are we at the next element?
+                var isLastCharacter = i == data.Length - 1;
+
                 var character = data[i];
-                if (inString)
+                if (inString && !isLastCharacter)
                 {
                     if (inEscapeSequence)
                     {
@@ -382,6 +395,7 @@ namespace PortableJson.Xamarin
                     {
                         if (character == '\"')
                         {
+                            temporaryData += character;
                             inString = false;
                         }
                         else if (character == '\\')
@@ -396,32 +410,37 @@ namespace PortableJson.Xamarin
                 }
                 else
                 {
-                    //keep track of nesting levels.
-                    if (character == '[' || character == '{') nestingLevel++;
-                    if (character == ']' || character == '}') nestingLevel--;
-
-                    //are we done with the whole sequence, or are we at the next element?
-                    var isLastCharacter = i == data.Length - 1;
-                    if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                    if (character == '\"' && !isLastCharacter)
                     {
-                        //do we need to finalize the temporary data?
-                        if(isLastCharacter)
+                        inString = true;
+                        temporaryData += character;
+                    } else { 
+
+                        //keep track of nesting levels.
+                        if (character == '[' || character == '{') nestingLevel++;
+                        if (character == ']' || character == '}') nestingLevel--;
+
+                        if (nestingLevel == 0 && (character == ',' || isLastCharacter))
+                        {
+                            //do we need to finalize the temporary data?
+                            if (isLastCharacter)
+                            {
+                                temporaryData += character;
+                            }
+
+                            if (!string.IsNullOrEmpty(temporaryData))
+                            {
+                                var element = Deserialize(temporaryData, innerType);
+                                listAddMethod.Invoke(list, new[] { element });
+
+                                //reset the temporary data.
+                                temporaryData = string.Empty;
+                            }
+                        }
+                        else
                         {
                             temporaryData += character;
                         }
-
-                        if (!string.IsNullOrEmpty(temporaryData))
-                        {
-                            var element = Deserialize(temporaryData, innerType);
-                            listAddMethod.Invoke(list, new[] { element });
-
-                            //reset the temporary data.
-                            temporaryData = string.Empty;
-                        }
-                    }
-                    else
-                    {
-                        temporaryData += character;
                     }
                 }
             }

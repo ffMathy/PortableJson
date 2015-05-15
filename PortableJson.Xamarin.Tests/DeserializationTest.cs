@@ -72,6 +72,10 @@ namespace PortableJson.Xamarin.Tests
             Assert.AreEqual("the quick brown fox", stringList[0]);
             Assert.AreEqual("jumps over the", stringList[1]);
             Assert.AreEqual("lazy dog", stringList[2]);
+
+            var objectList = JsonSerializationHelper.Deserialize<List<Person>>("[{Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}]");
+            Assert.IsNotNull(objectList);
+            Assert.AreEqual(2, objectList.Count);
         }
 
         [TestMethod]
