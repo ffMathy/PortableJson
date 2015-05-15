@@ -8,6 +8,8 @@ namespace PortableJson.Xamarin.Tests.TestData
 {
     class Group
     {
+        public Person Leader { get; set; }
+
         public List<Person> Persons { get; set; }
 
         public string Title { get; set; }

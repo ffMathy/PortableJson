@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using PortableJson.Xamarin.Tests.TestData;
+using System;
 
 namespace PortableJson.Xamarin.Tests
 {
@@ -18,7 +19,7 @@ namespace PortableJson.Xamarin.Tests
 
             var json = JsonSerializationHelper.Serialize(list);
 
-            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{\"Name\":\"Foobar\",\"Age\":1337,\"IsAlive\":false}]", json);
+            Assert.AreEqual("[\"The quick brown fox jumps over the lazy dog\",1337,null,{\"Id\":\"" + default(Guid) + "\",\"Name\":\"Foobar\",\"Age\":1337,\"IsAlive\":false}]", json);
         }
 
         [TestMethod]
@@ -82,7 +83,7 @@ namespace PortableJson.Xamarin.Tests
                 IsAlive = false
             });
 
-            Assert.AreEqual("{\"Persons\":[{\"Name\":\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",\"Age\":-10,\"IsAlive\":false}],\"Title\":\"My group\",\"IsActive\":true}", JsonSerializationHelper.Serialize(group));
+            Assert.AreEqual("{\"Leader\":null,\"Persons\":[{\"Id\":\"" + default(Guid) + "\",\"Name\":\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Id\":\"" + default(Guid) + "\",\"Name\":\"Ole\",\"Age\":-10,\"IsAlive\":false}],\"Title\":\"My group\",\"IsActive\":true}", JsonSerializationHelper.Serialize(group));
         }
     }
 }

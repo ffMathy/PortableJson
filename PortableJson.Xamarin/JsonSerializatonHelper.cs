@@ -96,6 +96,9 @@ namespace PortableJson.Xamarin
             } else if(element is bool)
             {
                 result = (bool)(object)element ? "true" : "false";
+            } else if(element is Guid)
+            {
+                result = "\"" + element + "\"";
             }
             else if (element == null)
             {
@@ -178,7 +181,7 @@ namespace PortableJson.Xamarin
             //remove all whitespaces from the JSON string.
             input = SanitizeJson(input);
 
-            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) || type == typeof(string) || type == typeof(bool))
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || type == typeof(double) || type == typeof(float) || type == typeof(decimal) || type == typeof(string) || type == typeof(bool) || type == typeof(Guid))
             {
                 //simple deserialization.
                 return DeserializeSimple(input, type);
@@ -512,6 +515,17 @@ namespace PortableJson.Xamarin
             } else if(type == typeof(bool))
             {
                 return string.Equals("true", data, StringComparison.OrdinalIgnoreCase) ? true : false;
+            } else if(type == typeof(Guid))
+            {
+                if (data.Length < 2 || (!data.EndsWith("\"") && !data.StartsWith("\"")))
+                {
+                    throw new InvalidOperationException("String deserialization requires the JSON input to be encapsulated in quotation marks.");
+                }
+                else
+                {
+                    data = data.Substring(0, data.Length - 1).Substring(1);
+                    return new Guid(data);
+                }
             }
             else
             {

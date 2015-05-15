@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PortableJson.Xamarin.Tests.TestData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -73,7 +74,8 @@ namespace PortableJson.Xamarin.Tests
             Assert.AreEqual("jumps over the", stringList[1]);
             Assert.AreEqual("lazy dog", stringList[2]);
 
-            var objectList = JsonSerializationHelper.Deserialize<List<Person>>("[{Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}]");
+            const string groupJson = "{\"Leader\":{Name:\"Jens\"},{\"Name\":\"Ole\"},Persons:[{Name:\"Jens\"},{\"Name\":\"Ole\"}],Title:\"My group\"}";
+            var objectList = JsonSerializationHelper.Deserialize<List<Group>>("[" + groupJson + "," + groupJson + "]");
             Assert.IsNotNull(objectList);
             Assert.AreEqual(2, objectList.Count);
         }
@@ -81,7 +83,8 @@ namespace PortableJson.Xamarin.Tests
         [TestMethod]
         public void TestObjectDeserialization()
         {
-            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}],Title:\"My group\",IsActive:true}");
+            var guid = Guid.NewGuid();
+            var group = JsonSerializationHelper.Deserialize<Group>("{Persons:[{\"Id\":\"" + guid + "\",Name:\"Jens\",\"Age\":1337,\"IsAlive\":true},{\"Name\":\"Ole\",Age:-10,IsAlive:false}],Title:\"My group\",IsActive:true}");
             Assert.IsNotNull(group);
 
             Assert.AreEqual("My group", group.Title);
@@ -90,7 +93,7 @@ namespace PortableJson.Xamarin.Tests
             Assert.IsNotNull(group.Persons);
             Assert.AreEqual(2, group.Persons.Count);
 
-            Assert.IsTrue(group.Persons.Any(p => p.Age == 1337 && p.Name == "Jens" && p.IsAlive));
+            Assert.IsTrue(group.Persons.Any(p => p.Age == 1337 && p.Name == "Jens" && p.IsAlive && p.Id == guid));
             Assert.IsTrue(group.Persons.Any(p => p.Age == -10 && p.Name == "Ole" && !p.IsAlive));
         }
     }
